@@ -1,6 +1,7 @@
 //------------------------------------------------------------
 //Hardware Connection Pins
-#define microStep 4
+#define microStep1 3
+#define microStep2 4
 #define trigger 5
 #define dirPin 6
 #define pulPin 7
@@ -8,7 +9,7 @@
 
 #define steps 400
 #define stepMultiplier 32
-#define accelTime 20
+#define accelTime 5
 //------------------------------------------------------------
 //System Defined Values
 #define LEDBlink 100
@@ -21,13 +22,13 @@ bool triggerCheck = LOW;
 bool ledLevel = HIGH;
 unsigned long prevMillis;
 unsigned long currMillis;
-unsigned int dly = 300;
-unsigned int stepCounter = 0;
+unsigned int dly = 200;
+unsigned long stepCounter = 0;
 unsigned int stepMultiplierCounter = 0;
 //------------------------------------------------------------
 
 bool checkTrigger(){
-    currMillis = millis();
+    currMillis = micros();
     delay(1);
     if (digitalRead(trigger) && buttonStatus == LOW){
         delay(1);
@@ -51,10 +52,14 @@ void setup(){
 
     pinMode(dirPin, OUTPUT);
     pinMode(pulPin, OUTPUT);
-    pinMode(microStep, OUTPUT);
+    pinMode(microStep1, OUTPUT);
+    pinMode(microStep2, OUTPUT);
     pinMode(ledIndicator, OUTPUT);
 
     pinMode(trigger, INPUT);
+
+    digitalWrite(microStep1, HIGH);
+    digitalWrite(microStep2, HIGH);
 
     stepCounter = 0;
     stepMultiplierCounter = 0;
@@ -64,22 +69,30 @@ void loop(){
     if (!triggerCheck){
         triggerCheck = checkTrigger();
     }
-    if (triggerCheck){
+    stepCounter = 0;
+    while (triggerCheck)
+    {
         currMillis = millis();
-        Serial.println("TRIGGERED!!!!");
-        if (stepCounter < steps){
-            if (stepMultiplierCounter < stepMultiplier){
-                digitalWrite(pulPin, HIGH);
-                delay(1);
-                digitalWrite(pulPin, LOW);
-                delay(dly);
-                stepMultiplierCounter++;
-            }
+        if(stepCounter < 64000){
+            digitalWrite(pulPin, HIGH);
+            delayMicroseconds(1);
+            digitalWrite(pulPin, LOW);
+            delayMicroseconds(dly);
             stepCounter++;
         }
-        if (currMillis - prevMillis > accelTime && dly > 5){
+        if(currMillis - prevMillis > accelTime && dly>10 && stepCounter < 12800)
+        {
             dly--;
             prevMillis = currMillis;
+        }
+        if(currMillis - prevMillis > accelTime && dly>10 && stepCounter > 51200)
+        {
+            dly++;
+            prevMillis = currMillis;
+        }
+        if(stepCounter>64000)
+        {
+            triggerCheck = LOW;
         }
     }
 }
